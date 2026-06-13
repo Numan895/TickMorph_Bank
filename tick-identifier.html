@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pakistan Tick Identifier</title>
+<style>
+  :root {
+    --bg: #0f1a0f;
+    --surface: #1a2e1a;
+    --card: #1f3620;
+    --border: #2d4a2d;
+    --accent: #5cb85c;
+    --accent2: #8fce8f;
+    --gold: #c9a84c;
+    --text: #e8f5e8;
+    --muted: #8aab8a;
+    --danger: #e57373;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* HEADER */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; gap: 14px; }
+  .logo { width: 38px; height: 38px; }
+  header h1 { font-size: 1.25rem; font-weight: 700; color: var(--accent2); letter-spacing: -.3px; }
+  header p { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+  .badge { margin-left: auto; background: var(--border); color: var(--accent); font-size: .7rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+
+  /* LAYOUT */
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+  .grid { display: grid; grid-template-columns: 380px 1fr; gap: 22px; }
+
+  /* PANELS */
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .panel-head { background: var(--surface); padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: .82rem; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: .6px; display: flex; align-items: center; gap: 8px; }
+  .panel-body { padding: 18px; }
+
+  /* UPLOAD */
+  .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 32px 20px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; position: relative; }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(92,184,92,.05); }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .upload-zone p { color: var(--muted); font-size: .85rem; }
+  .upload-zone strong { color: var(--accent); }
+
+  #preview-wrap { display: none; margin-top: 14px; position: relative; }
+  #preview-img { width: 100%; border-radius: 8px; border: 1px solid var(--border); max-height: 280px; object-fit: contain; background: #111; }
+  .remove-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.7); border: none; color: #fff; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px; }
+
+  /* GENUS HINT */
+  .genus-select { margin-top: 14px; }
+  .genus-select label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+  .genus-select select { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: .85rem; }
+
+  /* IDENTIFY BTN */
+  #identify-btn { width: 100%; margin-top: 16px; padding: 13px; background: var(--accent); color: #0a1a0a; font-weight: 700; font-size: .95rem; border: none; border-radius: 8px; cursor: pointer; transition: opacity .2s; }
+  #identify-btn:hover { opacity: .88; }
+  #identify-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* SPECIES BANK TAB */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+  .tab { padding: 11px 18px; font-size: .8rem; font-weight: 600; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* RESULTS */
+  #results-area { min-height: 300px; }
+  .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--muted); text-align: center; gap: 10px; }
+  .placeholder-icon { font-size: 3rem; opacity: .3; }
+
+  /* LOADING */
+  .loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 50px 20px; }
+  .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: var(--muted); font-size: .85rem; }
+  .loading-steps { font-size: .78rem; color: var(--border); text-align: center; line-height: 1.8; }
+
+  /* MATCH CARDS */
+  .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .match-header h3 { font-size: .88rem; color: var(--muted); }
+  .match-count { background: var(--accent); color: #0a1a0a; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+
+  .match-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; transition: border-color .2s; }
+  .match-card:hover { border-color: var(--accent); }
+  .match-card.top { border-color: var(--gold); }
+
+  .match-top { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
+  .rank { font-size: 1.1rem; font-weight: 800; color: var(--muted); min-width: 28px; }
+  .match-card.top .rank { color: var(--gold); }
+  .match-info { flex: 1; }
+  .match-species { font-size: .92rem; font-weight: 700; font-style: italic; color: var(--text); }
+  .match-family { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+  .score-wrap { text-align: right; }
+  .score { font-size: 1.6rem; font-weight: 800; color: var(--accent); line-height: 1; }
+  .match-card.top .score { color: var(--gold); }
+  .score-label { font-size: .68rem; color: var(--muted); }
+  .score-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin: 0 14px 10px; }
+  .score-bar { height: 4px; border-radius: 2px; background: var(--accent); transition: width .6s ease; }
+  .match-card.top .score-bar { background: var(--gold); }
+
+  .match-detail { display: none; padding: 0 14px 14px; border-top: 1px solid var(--border); }
+  .match-detail.open { display: block; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .detail-item { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+  .detail-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+  .detail-value { font-size: .78rem; color: var(--text); line-height: 1.4; }
+  .detail-full { grid-column: 1/-1; }
+
+  /* FEATURES */
+  .features-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .feature-tag { background: rgba(92,184,92,.12); border: 1px solid rgba(92,184,92,.25); color: var(--accent2); font-size: .7rem; padding: 3px 8px; border-radius: 12px; }
+  .feature-tag.match { background: rgba(92,184,92,.25); }
+  .feature-tag.diff { background: rgba(229,115,115,.1); border-color: rgba(229,115,115,.3); color: #e57373; }
+
+  /* PATHOGEN BADGE */
+  .pathogen-badge { background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.3); color: var(--gold); font-size: .7rem; padding: 3px 8px; border-radius: 12px; }
+
+  /* SPECIES BANK TABLE */
+  .bank-table { width: 100%; border-collapse: collapse; font-size: .76rem; }
+  .bank-table th { background: var(--surface); color: var(--accent2); text-align: left; padding: 8px 10px; font-size: .7rem; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+  .bank-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  .bank-table tr:hover td { background: rgba(255,255,255,.03); }
+  .italic { font-style: italic; }
+  .bank-scroll { max-height: 420px; overflow-y: auto; }
+  .bank-search { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: .83rem; margin-bottom: 12px; }
+
+  /* DISCLAIMER */
+  .disclaimer { background: rgba(201,168,76,.08); border: 1px solid rgba(201,168,76,.2); border-radius: 8px; padding: 10px 14px; font-size: .75rem; color: var(--gold); margin-top: 14px; line-height: 1.5; }
+
+  /* API KEY */
+  .api-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 18px; }
+  .api-section label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: 6px; }
+  .api-row { display: flex; gap: 8px; }
+  .api-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: .83rem; font-family: monospace; }
+  .api-save { background: var(--border); border: none; color: var(--accent); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: .8rem; font-weight: 600; }
+  .api-save:hover { background: var(--accent); color: #0a1a0a; }
+  .api-status { font-size: .72rem; margin-top: 5px; }
+  .api-status.ok { color: var(--accent); }
+  .api-status.err { color: var(--danger); }
+
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 38 38" fill="none">
+    <circle cx="19" cy="19" r="18" fill="#1f3620" stroke="#5cb85c" stroke-width="1.5"/>
+    <ellipse cx="19" cy="21" rx="7" ry="9" fill="#5cb85c" opacity=".8"/>
+    <circle cx="19" cy="13" r="4" fill="#8fce8f"/>
+    <line x1="12" y1="18" x2="5" y2="14" stroke="#5cb85c" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="12" y1="21" x2="4" y2="20" stroke="#5cb85c" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="12" y1="24" x2="5" y2="27" stroke="#5cb85c" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="26" y1="18" x2="33" y2="14" stroke="#5cb85c" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="26" y1="21" x2="34" y2="20" stroke="#5cb85c" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="26" y1="24" x2="33" y2="27" stroke="#5cb85c" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+  <div>
+    <h1>Pakistan Tick Morphological Identifier</h1>
+    <p>AI-powered species matching · 49-species bank · Zootaxa 5725(2) 2025</p>
+  </div>
+  <div class="badge">49 Species · Free Tool</div>
+</header>
+
+<div class="main">
+
+  <!-- API KEY -->
+  <div class="api-section">
+    <label>🔑 Anthropic API Key — required for identification (get free at console.anthropic.com)</label>
+    <div class="api-row">
+      <input class="api-input" id="api-key-input" type="password" placeholder="sk-ant-api03-...">
+      <button class="api-save" onclick="saveKey()">Save Key</button>
+    </div>
+    <div class="api-status" id="api-status"></div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: Upload + Controls -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">📷 Upload Tick Photo</div>
+        <div class="panel-body">
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept="image/*">
+            <div class="upload-icon">🔬</div>
+            <p><strong>Click or drag</strong> a tick photo here</p>
+            <p style="margin-top:6px;font-size:.75rem;">JPG, PNG, WEBP · Dorsal or ventral view</p>
+          </div>
+          <div id="preview-wrap">
+            <img id="preview-img" alt="Uploaded tick">
+            <button class="remove-btn" onclick="removeImage()">✕</button>
+          </div>
+
+          <div class="genus-select">
+            <label>Genus hint (optional — narrows search)</label>
+            <select id="genus-hint">
+              <option value="">— Any genus (let AI decide) —</option>
+              <option value="Argasidae (soft ticks — no scutum)">Argasidae (soft ticks)</option>
+              <option value="Amblyomma">Amblyomma</option>
+              <option value="Dermacentor">Dermacentor</option>
+              <option value="Haemaphysalis">Haemaphysalis</option>
+              <option value="Hyalomma">Hyalomma</option>
+              <option value="Ixodes">Ixodes</option>
+              <option value="Nosomma">Nosomma</option>
+              <option value="Rhipicephalus">Rhipicephalus</option>
+            </select>
+          </div>
+
+          <button id="identify-btn" onclick="identify()" disabled>Identify Tick →</button>
+
+          <div class="disclaimer">
+            ⚠️ For research & educational use only. Always confirm with an expert taxonomist for clinical or veterinary decisions. Source: Ali et al. 2025, Zootaxa 5725(2).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Results + Species Bank -->
+    <div>
+      <div class="panel" style="height:100%;">
+        <div class="tabs">
+          <button class="tab active" onclick="showTab('results')">Results</button>
+          <button class="tab" onclick="showTab('bank')">Species Bank (49)</button>
+        </div>
+
+        <!-- RESULTS TAB -->
+        <div id="tab-results" class="panel-body">
+          <div id="results-area">
+            <div class="placeholder">
+              <div class="placeholder-icon">🦠</div>
+              <p style="font-size:.9rem;color:var(--text)">Upload a tick photo to identify</p>
+              <p style="font-size:.78rem;">The AI will compare your specimen against all 49 Pakistan tick species and return morphological similarity scores.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- BANK TAB -->
+        <div id="tab-bank" class="panel-body" style="display:none;">
+          <input class="bank-search" id="bank-search" placeholder="Search species, genus, host..." oninput="filterBank()">
+          <div class="bank-scroll">
+            <table class="bank-table" id="bank-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Family</th>
+                  <th>Species</th>
+                  <th>Host(s)</th>
+                  <th>Distribution</th>
+                </tr>
+              </thead>
+              <tbody id="bank-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── SPECIES BANK ────────────────────────────────────────────────────────────
+const SPECIES_BANK = [
+  {id:1,family:"Argasidae",genus:"Alectorobius",species:"coniceps",authority:"(Canestrini, 1890)",size_m:"4.15mm",size_f:"3.84mm",color:"Dark brown",scutum:"ABSENT (soft tick). Body with mammillae sparse; large conspicuous discs; posteromedian disc row reaching 2/5 body length",capitulum:"Long conspicuous cheeks; basis capituli pebbled, 2× as long as broad",dental:"2/2",coxal:"Coxae II–IV contiguous; coxa I separated; tarsi elongate, lacking humps",key_features:"No scutum; pebbled discs; dental 2/2; coxae II–IV contiguous; coxa I separated",hosts:"Nests of Hirundo rustica (barn swallow)",vector:"Unknown",distribution:"Charsadda District, Mardan District (KP)",note:""},
+  {id:2,family:"Argasidae",genus:"Alveonasus",species:"lahorensis",authority:"",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Soft tick — no scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Soft tick; literature record only",hosts:"Ovis orientalis (urial)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:3,family:"Argasidae",genus:"Argas",species:"abdussalami",authority:"Hoogstraal & McCarthy, 1965",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Soft tick — no scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Soft tick; found near Lahore on vultures",hosts:"Gyps bengalensis; Gyps africanus",vector:"Unknown",distribution:"Lahore (literature)",note:""},
+  {id:4,family:"Argasidae",genus:"Argas",species:"persicus",authority:"(Oken, 1818)",size_m:"—",size_f:"4.7mm long, 3.14mm wide",color:"Not specified",scutum:"Soft tick. Suture marked by rectangular peripheral cells",capitulum:"Genital aperture lips differ between sexes: male = thumbnail-like (anterior more chitinized); female = human-lips-like (equal chitinization)",dental:"Not specified",coxal:"Not specified",key_features:"Rectangular peripheral cells; sex-dimorphic genital aperture lips",hosts:"Gallus domesticus (poultry)",vector:"Coxiella-like endosymbionts",distribution:"Sindh, Punjab, KP",note:""},
+  {id:5,family:"Argasidae",genus:"Argas",species:"reflexus",authority:"(Fabricius, 1794)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Soft tick — no scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Soft tick; found in animal burrows",hosts:"Animal burrows",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:6,family:"Argasidae",genus:"Argas",species:"hermanni",authority:"Audouin, 1826",size_m:"Nymph: 3.72mm long, 2.15mm wide",size_f:"Nymph only described",color:"Not specified",scutum:"ABSENT. Nymph: mammillae absent; dorsal/ventral integument with radiating ridges/wrinkled rows",capitulum:"Basis capituli large, no ventral setae; hypostome apex bluntly rounded; dental 2/2",dental:"2/2",coxal:"Palpal segments 1,2,4 nearly equal; segment 3 half length; genital aperture absent (nymph)",key_features:"FIRST PAKISTAN RECORD. Mammillae absent; radiating ridges; segment 3 half-length; no genital aperture",hosts:"Columba livia (rock pigeon)",vector:"Unknown",distribution:"Buner District (KP) — FIRST RECORD",note:"⭐ First Pakistan record"},
+  {id:7,family:"Argasidae",genus:"Argas",species:"sp. 'rousetti'",authority:"",size_m:"—",size_f:"—",color:"Not described",scutum:"Soft tick — no scutum",capitulum:"Not described",dental:"—",coxal:"Not described",key_features:"Provisional species; molecular identification only",hosts:"Cynopterus sphinx (fruit bat)",vector:"Rickettsia honei-like genotype",distribution:"Northern KP",note:"Provisional"},
+  {id:8,family:"Argasidae",genus:"Carios",species:"vespertilionis",authority:"(Latreille, 1796)",size_m:"—",size_f:"3.55mm long, 3.14mm wide",color:"Pale yellow to light or dark brown",scutum:"Soft tick. Body circular/subcircular; fine wrinkling antero-centrally; low granulations marginally; chainlike discs in radiating rows",capitulum:"Deep camerostome; basis capituli convex lateral margins; hypostome 2× longer than wide; 6–7 apical denticle rows; dental 2/2",dental:"2/2",coxal:"Legs short, anterior to midlength; coxae contiguous; eyes ABSENT; spiracular plates small between coxae III–IV",key_features:"EYES ABSENT; circular body; deep camerostome; radiating disc rows; legs short and anterior; spiracular plates small",hosts:"Cynopterus sphinx (short-nosed fruit bat)",vector:"Unknown",distribution:"Dir Lower, Peshawar, Charsadda, Mardan, Hangu, Swabi, Bajaur (KP)",note:""},
+  {id:9,family:"Argasidae",genus:"Ornithodoros",species:"papillipes",authority:"(Birula, 1895)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Soft tick — no scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Soft tick; animal burrows",hosts:"Animal burrows",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:10,family:"Argasidae",genus:"Ornithodoros",species:"pakistanensis",authority:"Ali, Chitimia-Dobler, Muñoz-Leal & Mans",size_m:"Nymph: 5.21mm long, 2.80mm wide",size_f:"Nymph only",color:"Not specified",scutum:"Soft tick. Nymph: body suboval; dorsum with dense irregular mammillae; dorsal discs pebbled",capitulum:"Beneath hood; cheeks small; basis capituli rectangular/wrinkled; palpi elongate with dense setae",dental:"2/2",coxal:"Coxa I–II separated; coxae II–IV contiguous decreasing size; tarsus I with 5 dorsal humps; tarsus II with 4 humps; tarsi III–IV lacking humps; eyes absent",key_features:"NEW SPECIES. Tarsus I with 5 dorsal humps (unique); coxae I–II separated; eyes absent; dense irregular mammillae",hosts:"Sheds of Gallus domesticus; Bubalus bubalis",vector:"Rickettsia sp.",distribution:"Shangla, Dir Upper/Lower, Orakzai, Bajaur (KP)",note:"⭐ New species"},
+  {id:11,family:"Argasidae",genus:"Ornithodoros",species:"tholozani",authority:"(Laboulbène & Mégnin, 1882)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Soft tick — no scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Soft tick; literature record only",hosts:"Sheds of Gallus domesticus; Bubalus bubalis",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:12,family:"Ixodidae",genus:"Amblyomma",species:"gervaisi",authority:"(Lucas, 1847)",size_m:"3.90mm long, 2.44mm wide",size_f:"3.97mm long, 2.49mm wide",color:"Not specified",scutum:"Teardrop-shaped. ♂ Conscutum subcircular, ORNATE; medium punctations evenly distributed; cervical grooves short, deep, comma-shaped. ♀ Scutum covers 1/3 body; small punctations; comma-shaped cervical grooves",capitulum:"Basis capituli flask-shaped; 4–5 ventral setae each lateral margin; palpal segments 1+2 FUSED; dental 3/3; distinct corona on hypostome",dental:"3/3",coxal:"♂ Coxa I: 2 broad flat pointed spurs (external < internal); coxae II–III: single short spur; coxa IV: triangular spur",key_features:"ORNATE conscutum; palpal segs 1+2 fused; corona on hypostome; 5 ventral plates (♂); flask-shaped basis capituli; 3/3",hosts:"Varanus bengalensis; Platyceps rhodorachis (snake)",vector:"Reptile-associated Borrelia sp.",distribution:"Lahore, Multan; central and northern KP",note:"Reptile tick"},
+  {id:13,family:"Ixodidae",genus:"Amblyomma",species:"javanense",authority:"(Supino, 1897)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record only; reptile/pangolin tick",hosts:"Manis crassicaudata (pangolin); Varanus bengalensis",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:14,family:"Ixodidae",genus:"Amblyomma",species:"pakhtunensis",authority:"Ali, Khan, Chitimia-Dobler & Mans, 2024",size_m:"4.49mm long, 3.20mm wide",size_f:"4.50mm long, 2.90mm wide",color:"Not specified",scutum:"♂ Conscutum INORNATE, broadly oval/pyriform; small sparse punctations (posterior/lateral); cervical grooves deep, short, comma-shaped; 11 festoons; first festoon clearly defined; eyes indistinct. ♀ Scutum subcordate, wider anteriorly",capitulum:"Basis capituli subrectangular; cornua ABSENT; palpal segs 1+2 fused; palps slightly > hypostome; dental 3/3; hypostome clavate with corona",dental:"3/3",coxal:"♂ Coxa I: 2 broad blunt widely separated SUBEQUAL spurs (external > internal); coxae II–III: short blunt spur; coxa IV: narrow spur",key_features:"NEW SPECIES. INORNATE conscutum (unlike A. gervaisi); cornua absent; 11 festoons; coxa I spurs widely separated and subequal; pyriform body",hosts:"Varanus bengalensis (Bengal monitor lizard)",vector:"Unknown",distribution:"Bajaur District (KP)",note:"⭐ New species"},
+  {id:15,family:"Ixodidae",genus:"Dermacentor",species:"raskemensis",authority:"Pomerantzev, 1946",size_m:"4.71mm long, 2.80mm wide",size_f:"4.36mm long, 2.45mm wide",color:"METALLIC WHITE conscutum (♂); metallic white scutum (♀)",scutum:"♂ Conscutum ovoid; cervical grooves short deep diverging; 11 festoons; metallic white except grooves/punctations; eyes oval at anterior 1/5. ♀ Scutum cordiform, widest at midpoint; eyes circular, flat",capitulum:"♂ Rectangular, 1.3× longer; cornua sharply pointed (1/3 dorsal basis). ♀ Subrectangular, broader than long; cornua minute subtriangular; dental 3/3",dental:"3/3",coxal:"♂ Coxa I: 2 blunt widely separated subequal spurs; coxae II–III: single short blunt spur; coxa IV: large narrow elongate external spur. ♀ Posterior lip of genital aperture V-shaped",key_features:"METALLIC WHITE conscutum; cordiform scutum (♀); 11 festoons; widely separated coxa I spurs; large elongate coxa IV spur",hosts:"Ovis aries; Capra falconeri (Markhor)",vector:"Unknown",distribution:"Ziarat, Quetta (Balochistan); Swat; Hindu Kush, Karakoram, Himalaya ranges",note:""},
+  {id:16,family:"Ixodidae",genus:"Dermacentor",species:"montanus",authority:"Filippova & Panova, 1974",size_m:"3.95mm long, 2.38mm wide",size_f:"4.06mm long, 2.37mm wide",color:"♂ Dark red–dark brown with IVORY ORNAMENTATION. ♀ Reddish-brown with whitish enameling",scutum:"♂ Elongate oval (widest at coxae IV); extensive ivory ornamentation; 11 festoons; eyes oval, slightly convex, at 1/5 scutal length; cervical grooves deep anteriorly. ♀ Subcircular with prominently angled posterolateral margins; whitish enameling",capitulum:"♂ Rectangular with short blunt cornua; palpi/basis partially covered with whitish enameling; palpi robust/short. ♀ Length ~2× width; cornua triangular short; porose areas deep subcircular; dental ♂3/3 ♀4/4 anterior /3/3 posterior",dental:"♂ 3/3; ♀ 4/4 (anterior)/3/3",coxal:"♂ Coxa I: long triangular closely appressed spurs; coxae II–III: small broadly oval internal + sharply pointed external; coxa IV: enlarged with narrow tapering triangular external spur; GENU AND TIBIAE of legs II–IV with stout VENTRAL SPURS; tarsi humped",key_features:"FIRST PAKISTAN RECORD. Whitish enameling on palpi and basis; stout ventral spurs on genu/tibia of legs II–IV (unique); tarsi humped; elongate oval conscutum widest at coxae IV",hosts:"Bos grunniens (yak)",vector:"Unknown",distribution:"Chitral (KP) — FIRST RECORD IN PAKISTAN",note:"⭐ First Pakistan record"},
+  {id:17,family:"Ixodidae",genus:"Haemaphysalis",species:"bispinosa",authority:"Neumann, 1897",size_m:"2.10mm long, 1.15mm wide",size_f:"2.54mm long, 1.48mm wide",color:"Reddish brown to dark brown",scutum:"♂ Conscutum ovoid; broadly rounded margins; fine irregular punctations; cervical grooves short deep comma; festoons 2× as long as broad. ♀ Circular/elongate-oval; smoothly rounded posterolateral margins; sparse punctations",capitulum:"♂ Basis capituli rectangular 2× as wide as long; CONSPICUOUS POINTED cornua; palpi short/broad. ♀ Basis capituli 3× wider than long; cornua triangular, sharply pointed; dental 4/4",dental:"4/4",coxal:"♂ Coxa I: prominent narrow spur; coxae II–IV: absent or minute. ♀ All coxae distinct spurs; posterior lip U-shaped",key_features:"Small tick; basis 2× wide (♂)/3× wide (♀); coxa I only spur in male; festoons 2× as long as broad; pointed cornua",hosts:"Ovis aries; Capra hircus; Equus ferus; Equus asinus; Bubalus bubalis",vector:"Coxiella sp.; Anaplasma bovis; Clostridiaceae",distribution:"AJK, KP, Punjab, Balochistan",note:""},
+  {id:18,family:"Ixodidae",genus:"Haemaphysalis",species:"canestrinii",authority:"(Supino, 1897)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record only; carnivore tick",hosts:"Vulpes bengalensis; Felis chaus; Canis aureus",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:19,family:"Ixodidae",genus:"Haemaphysalis",species:"cornupunctata",authority:"Hoogstraal & Varma, 1962",size_m:"2.89mm long, 1.74mm wide",size_f:"4.00mm long, 3.10mm wide",color:"Reddish brown (♂); reddish to dark brown (♀)",scutum:"♂ Elongate oval; lateral grooves distinct; 11 festoons; few sparse punctations. ♀ Elongate-oval nearly 2× as long as broad; anterior 1/3 diverges widely then abruptly narrows; punctations larger/deeper",capitulum:"♂ Basis rectangular; short triangular cornua; palpi conical. ♀ Short widely triangular cornua; porose areas large subcircular; dental 4/4; 6–8 denticle rows",dental:"4/4",coxal:"♂ Coxal spurs increase length I→IV; COXA IV spur very large almost reaching anal region; Y-shaped anal groove. ♀ Coxal spurs absent or minute",key_features:"COXA IV spur very large (almost reaching anal region in male); Y-shaped anal groove; conscutum 2× longer than wide (♀); spur size increases I→IV",hosts:"Bos indicus; Ovis aries; Capra hircus",vector:"SFG Rickettsia; Coxiella sp.; Coxiella burnetii; Candidatus Rickettsia shennongii",distribution:"Central KP, Swat, Gilgit, Kaghan Valley, AJK, Punjab",note:""},
+  {id:20,family:"Ixodidae",genus:"Haemaphysalis",species:"danieli",authority:"Černý & Hoogstraal, 1977",size_m:"3.32mm long, 2.00mm wide",size_f:"3.37mm long, 2.20mm wide",color:"Dark red to reddish brown",scutum:"♂ Pyriform 2× as long as wide; widest at spiracular plates; small–medium shallow punctations dense/uneven; cervical grooves deep comma; 11 festoons; lateral grooves long, enclosing first 2 festoons. ♀ Pyriform, longer than wide",capitulum:"♂ Rectangular, longer than wide; short thick blunt cornua. ♀ ~3× wider than long; CORNUA ABSENT; dental 5/5; minute denticles in several rows",dental:"5/5",coxal:"♂ ALL coxae similar sharply pointed outward-curving spurs; tarsi distinctly humped; claws well developed. ♀ Coxae I–IV large subequal broad bluntly rounded spurs; posterior lip U-shaped",key_features:"DENTAL FORMULA 5/5 (distinctive); pyriform conscutum 2× longer; all coxal spurs similar outward-curving (♂); tarsi distinctly humped; cornua absent (♀)",hosts:"Cricetulus migratorius; Alticola roylei; Apodemus flavicollis; Capra hircus",vector:"Unknown",distribution:"KP; Gilgit-Baltistan",note:"Small mammal tick"},
+  {id:21,family:"Ixodidae",genus:"Haemaphysalis",species:"erinacei",authority:"Pavesi, 1884",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; hedgehog tick",hosts:"Hemiechinus auritus (long-eared hedgehog)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:22,family:"Ixodidae",genus:"Haemaphysalis",species:"howletti",authority:"Warburton, 1913",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; bird/horse tick",hosts:"Equus caballus; Ammoperdix griseogularis; Myophonus caeruleus",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:23,family:"Ixodidae",genus:"Haemaphysalis",species:"indica",authority:"Warburton, 1910",size_m:"1.65mm long, 0.91mm wide",size_f:"1.66mm long, 0.96mm wide",color:"Reddish yellow",scutum:"♂ ~1.6× as long as wide; broadly rounded; deep lateral grooves from anterior 1/4 enclosing first festoon; 11 festoons. ♀ Ovate 1.2× as long as wide",capitulum:"♂ Basis 2× as wide as long; cornua short broadly triangular; PALPI CONSPICUOUSLY BROAD (1.6× basis width); segment 2 2× as wide as long with DEEPLY CONCAVE posterodorsal margin; dental 4/4. ♀ Similar",dental:"4/4",coxal:"♂ Each coxa broadly triangular spur; COXA I SPUR 2× SIZE of coxae II–IV; tarsi stout/short with humps; claws small. ♀ Coxal spurs shorter than male",key_features:"VERY SMALL TICK (~1.6mm); palpi conspicuously broad (1.6× basis); deeply concave posterodorsal margin segment 2; coxa I spur 2× others",hosts:"Suncus murinus; Vulpes bengalensis; Canis aureus; Canis lupus; Herpestes javanicus",vector:"Unknown",distribution:"KP; Lahore; Hyderabad",note:""},
+  {id:24,family:"Ixodidae",genus:"Haemaphysalis",species:"intermedia",authority:"Warburton & Nuttall, 1909",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; francolin tick",hosts:"Francolinus pondicerianus (grey francolin)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:25,family:"Ixodidae",genus:"Haemaphysalis",species:"kashmirensis",authority:"Hoogstraal & Varma, 1962",size_m:"2.96mm long, 1.68mm wide",size_f:"3.33mm long, 2.00mm wide",color:"Reddish brown",scutum:"♂ Elongate oval 2× as wide as long; bluntly rounded posteriorly; cervical grooves very short, convergent, deep; 11 festoons. ♀ Cordiform ≈ equal length and width; cervical grooves deep subparallel anteriorly; small dense punctations over anterior 2/5",capitulum:"♂ Basis slightly longer than wide; cornua triangular ROBUST sharply pointed; PALPAL SEGMENT 2 POSTERIORLY ELEVATED WITH ANGULAR SPUR-LIKE RIDGE; dental 6/6. ♀ Short broadly triangular cornua; dental 5/5; hypostome 9–12 rows",dental:"♂ 6/6; ♀ 5/5",coxal:"♂ Each coxa with small HOOK-LIKE CURVED spur; trochanters without spurs but with DISTAL SPUR-LIKE RIDGE; tarsi short stout slightly humped. ♀ Tarsi II–III more distinctly humped",key_features:"PALPAL SEGMENT 2 with angular spur-like ridge (♂ unique); dental 6/6 (♂); hook-like coxal spurs; trochanters with distal spur-like ridge",hosts:"Petaurista philippensis; Rattus rattus; Bos indicus; Ovis aries; Capra hircus",vector:"Undetermined Rickettsia sp.",distribution:"AJK, Naran, Shogran, Babusar, Saidu Sharif, Gilgit, central KP",note:""},
+  {id:26,family:"Ixodidae",genus:"Haemaphysalis",species:"kutchensis",authority:"Hoogstraal & Trapido, 1963",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; hare tick",hosts:"Lepus nigricollis (black-naped hare)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:27,family:"Ixodidae",genus:"Haemaphysalis",species:"montgomeryi",authority:"Nuttall, 1912",size_m:"2.25mm long, 1.38mm wide",size_f:"3.32mm long, 2.20mm wide",color:"Yellowish to brownish-yellow",scutum:"♂ Elongate 1.5× longer; GLOSSY surface; 11 festoons; lateral grooves short shallow. ♀ Elongate 1.25× longer; rounded posterior margins; dense punctation anteriorly",capitulum:"♂ Basis 1.3× longer; cornua short broadly triangular; palpi short/compact WITHOUT basolateral projections; dental 6/6; segments 2&3 with pointed ventral spurs",dental:"6/6",coxal:"♂ Each coxa prominent sharply pointed spur; coxa I long; COXA IV SPUR 2× COXA III; 12–20 long setae per coxa; TROCHANTERS WITH POINTED VENTRAL SPURS; tarsi long/stout",key_features:"TROCHANTERS with pointed ventral spurs; coxa IV spur 2× coxa III; 12–20 long setae per coxa; dental 6/6; palpi without basolateral projections; glossy scutum",hosts:"Bos indicus; Bubalus bubalis; Ovis aries; Capra hircus",vector:"Coxiella sp.; Rickettsia hoogstraalii; Rickettsia sp.",distribution:"Gilgit-Baltistan, KP, AJK, Punjab, Sindh, northern areas",note:""},
+  {id:28,family:"Ixodidae",genus:"Haemaphysalis",species:"sulcata",authority:"Canestrini & Fanzago, 1878",size_m:"3.82mm long, 1.95mm wide",size_f:"3.70mm long, 2.08mm wide",color:"Dark or reddish brown",scutum:"♂ Elongate; lateral grooves well-defined from coxae II enclosing first festoon; 11 festoons; sparse punctations. ♀ Reddish, broadly ovate; LARGE DEEP DENSE PUNCTATIONS; sinuous posterior margin",capitulum:"♂ Cornua ROBUST, LONG, SHARPLY POINTED; segment 2 with prominent arched lateral angles; dental 6/6; 6 rows. ♀ Cornua very short or ABSENT; porose areas large subcircular widely separated; dental 4/4",dental:"♂ 6/6; ♀ 4/4",coxal:"♂ Coxa I: narrow tapering spur; coxae II–III: very short broad spurs; coxa IV: relatively long curved laterally. ♀ Coxal spurs ABSENT or minute; genital aperture U-shaped with thickened posterior lip",key_features:"LARGE species; robust long sharply pointed cornua (♂); 6/6 dental (♂); coxa IV curved laterally; ♀ coxal spurs absent/minute; sinuous posterior scutal margin and dense large punctations (♀)",hosts:"Bos indicus; Bubalus bubalis; Ovis aries; Capra hircus; Bos grunniens; Equus caballus",vector:"Anaplasma bovis; Theileria spp.; Ehrlichia spp.; Rickettsia massiliae; CCHFV",distribution:"KP, AJK, Balochistan, Punjab",note:""},
+  {id:29,family:"Ixodidae",genus:"Hyalomma",species:"aegyptium",authority:"(Linnaeus, 1758)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; large bulging eyes in sockets (Hyalomma hallmark)",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; tortoise tick; Hyalomma hallmark = large bulging eyes in sockets",hosts:"Geochelone elegans (Indian star tortoise)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:30,family:"Ixodidae",genus:"Hyalomma",species:"anatolicum",authority:"Koch, 1844",size_m:"2.60mm long, 1.54mm wide",size_f:"3.00mm long, 1.86mm wide",color:"Pale reddish to reddish-brown (♂); yellowish to dark brown (♀)",scutum:"♂ Narrowly oval; cervical grooves superficial extending half conscutum; PARMA pale/dark, often absent or poorly defined; 2 pairs clearly defined festoons; posteromedian groove NOT connected to parma; eyes large bulging in sockets. ♀ As long as broad; posterior margin evenly rounded; eyes large in sockets at scutal midlength",capitulum:"LONG palpi parallel; basis subrectangular; dorsal margin straight/slightly concave; cornua MINUTE; palpal seg 2 with PROXIMAL CONSTRICTION; hypostome clavate slightly > palpi; dental 3/3",dental:"3/3",coxal:"♂ Coxa I: closely spaced; internal WIDELY TRIANGULAR; external CURVED AND NARROW; coxae II–IV external well-developed (decreasing II→IV); coxa IV INTERNAL SPUR LARGE AND PROMINENT. Adanal plates narrow elongate tapering posteriorly",key_features:"MOST WIDESPREAD. Parma poorly defined/absent; long parallel palpi; proximal constriction palpal seg 2; coxa I internal widely triangular + external curved/narrow; coxa IV internal spur large; large bulging eyes",hosts:"Bos indicus; Bubalus bubalis; Ovis aries; Capra hircus; Equus asinus; Equus caballus; Camelus dromedarius",vector:"CCHFV; Coxiella burnetii; Theileria spp.; Rickettsia massiliae; Anaplasma marginale; Ehrlichia spp.",distribution:"Throughout Pakistan — MOST WIDESPREAD species",note:"Most common"},
+  {id:31,family:"Ixodidae",genus:"Hyalomma",species:"asiaticum",authority:"Schulze & Schlottke, 1929",size_m:"4.25mm long, 2.40mm wide",size_f:"5.32mm long, 3.08mm wide",color:"Dark brown to pale yellow (♂); dark brown to red-brown (♀)",scutum:"♂ Ovoid; cervical grooves VERY DEEP, WIDE, LONG (to scutal midlength); PARMA LARGE AND WELL-DEFINED, flanked by 4 clearly defined festoons; large punctations mainly lateral/scapular. Eyes large bulging in sockets. ♀ Length and width subequal; prominent posterolateral angles",capitulum:"♂ Basis subrectangular; dorsal posterior margin DEEPLY CONCAVE AND ANGULAR; moderately developed cornua; palpi long. ♀ Dorsolateral projections short/broad; ventral projections absent; inconspicuous cornua; dental 3/3",dental:"3/3",coxal:"♂ Coxa I: 2 subequal spurs (external slightly longer); coxae II–IV: distinct triangular external spurs; 3 pairs ventral plates: adanal (long narrow straight), subanal (suboval longitudinally aligned), accessory. ♀ Coxa I: 2 long subequal spurs",key_features:"LARGE TICK; deeply concave angular dorsal posterior basis (♂); parma large well-defined with 4 flanking festoons; long palpi; ivory enameling on legs; 3 pairs ventral plates",hosts:"Camelus dromedarius; Bos indicus; Ovis aries",vector:"Unknown",distribution:"Balochistan, KP, Punjab",note:""},
+  {id:32,family:"Ixodidae",genus:"Hyalomma",species:"brevipunctata",authority:"Sharif, 1928",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; large bulging eyes",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; Hyalomma = large bulging eyes",hosts:"Homo sapiens; Bos indicus",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:33,family:"Ixodidae",genus:"Hyalomma",species:"dromedarii",authority:"Koch, 1844",size_m:"5.40mm long, 3.28mm wide",size_f:"5.80mm long, 3.88mm wide",color:"Red-brown (♂); reddish brown (♀)",scutum:"♂ Broadly oval; parma CONICAL AND YELLOWISH, flanked by 4 festoons; lateral grooves deeply impressed; posteromedian groove wide; paramedian grooves well-defined. Eyes large bulging in sockets. ♀ Nearly as long as broad; clearly defined posterolateral angles",capitulum:"♂ Long/stout; dorsal posterior margin ANGULAR AND DEEPLY CONCAVE; cornua small; palpi long. ♀ Short broad dorsolateral projections; dental 3/3",dental:"3/3",coxal:"♂ Coxa I: long subequal spurs (external slightly longer); ADANAL PLATES DISTINCTLY CURVED AND ROUNDED POSTERIORLY; subanal plates large aligned with accessory plates. ♀ Posterior lip V-shaped",key_features:"LARGE camel tick; CONICAL YELLOWISH PARMA flanked by 4 festoons; adanal plates distinctly curved (♂ diagnostic); angular deeply concave dorsal basis; long stout legs with ivory enameling",hosts:"Camelus dromedarius; Bos indicus; Bubalus bubalis; Ovis aries; Equus caballus; Capra hircus",vector:"CCHFV; Theileria lestoquardi; Babesia occultans; Coxiella burnetii; Anaplasma marginale",distribution:"AJK, Punjab, KP, Sindh, Balochistan",note:""},
+  {id:34,family:"Ixodidae",genus:"Hyalomma",species:"hussaini",authority:"Sharif, 1928",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; large bulging eyes",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; Hyalomma = large bulging eyes",hosts:"Bos indicus; Bubalus bubalis; Equus caballus; Ovis aries; Camelus dromedarius; Capra hircus",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:35,family:"Ixodidae",genus:"Hyalomma",species:"impeltatum",authority:"Schulze & Schlottke, 1930",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; large bulging eyes",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record",hosts:"Ovis aries; Camelus dromedarius; Bos indicus; Rattus rattus; Lepus nigricollis",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:36,family:"Ixodidae",genus:"Hyalomma",species:"isaaci",authority:"Sharif, 1928",size_m:"4.18mm long, 2.63mm wide",size_f:"4.64mm long, 2.79mm wide",color:"DARK conscutum (♂); black to dark reddish-brown scutum (♀)",scutum:"♂ DARK broadly oval; PARMA ABSENT; 5 CLEARLY DEFINED FESTOONS; posteromedian and paramedian grooves deeply impressed; lateral grooves to eyes; large punctations very few. ♀ Black to dark reddish-brown; sinuous posterolateral margins",capitulum:"Long/stout; basis lacking lateral projections; CONCAVE dorsal posterior margin; palpi > hypostome; dental 3/3",dental:"3/3",coxal:"♂ Coxa I: long subequal (external slightly longer); coxae II–IV: distinct triangular. 3 ventral plates: adanal (long, truncated, aligned with subanal), subanal (small), ACCESSORY (large, adjacent to adanal)",key_features:"DARK/BLACK conscutum; parma ABSENT with only 5 festoons; narrow ivory bands on legs; large accessory plates ADJACENT to adanal plates; sinuous posterolateral margins (♀)",hosts:"Bos indicus; Bubalus bubalis; Equus caballus; Ovis aries; Camelus dromedarius; Capra hircus",vector:"Unknown",distribution:"Balochistan, Punjab, KP",note:""},
+  {id:37,family:"Ixodidae",genus:"Hyalomma",species:"kumari",authority:"Sharif, 1928",size_m:"3.30mm long, 1.62mm wide",size_f:"3.80mm long, 2.08mm wide",color:"Yellow-brown (narrow conscutum)",scutum:"♂ Usually NARROW and yellow-brown; cervical grooves shallow (1/4 conscutum); PARMA ABSENT; 11 distinct festoons. Eyes large in sockets. ♀ Rounded yellow-brown; slightly longer than wide; posterolateral angles moderately developed",capitulum:"♂ Basis subrectangular; PROMINENT LATERAL PROJECTIONS DORSALLY AND VENTRALLY; moderately developed cornua; palpal seg 1 with 2–3 VENTRO-MEDIAN SETAE; dental 3/3. ♀ Prominent lateral projections",dental:"3/3",coxal:"♂ Coxa I: long external/internal spurs (external slightly longer); coxae II–IV: subtriangular distinct external + minute curved internal. ONLY 2 PAIRS VENTRAL PLATES (adanal + accessory; SUBANAL PLATES ABSENT)",key_features:"SUBANAL PLATES ABSENT (only 2 ventral plate pairs — unique); prominent lateral projections on basis; 11 festoons; palpal seg 1 with 2–3 ventro-median setae; parma absent",hosts:"Ovis aries; Camelus dromedarius; Bos indicus; Bubalus bubalis; Capra hircus",vector:"Rickettsia conorii",distribution:"Northern areas, KP, Kirthar Range",note:""},
+  {id:38,family:"Ixodidae",genus:"Hyalomma",species:"schulzei",authority:"Olenev, 1931",size_m:"8.49mm long, 4.41mm wide",size_f:"8.42mm long, 5.02mm wide",color:"Yellowish to reddish-brown (♂); dark to reddish-brown (♀)",scutum:"♂ Broadly ovate; cervical/lateral grooves deep (2/3 conscutum); PARMA LARGE AND RECTANGULAR, flanked by 4 festoons; paramedian grooves well-defined OBLIQUELY ORIENTED. Eyes large/bulging. ♀ Slightly longer than broad; prominently angled posterolateral margins",capitulum:"♂ Basis subrectangular; lateral projections short dorsally, absent ventrally; cornua inconspicuous; dental 3/3. ♀ Dorsal posterior margin slightly concave; short posterolateral projections",dental:"3/3",coxal:"♂ Coxa I: long subequal spurs; ADANAL PLATES LARGE AND BROAD with concave anteromedian margin; subanal plates asymmetrically oval; accessory plates somewhat separate. ♀ Coxa I: long subequal spurs",key_features:"LARGEST Hyalomma (~8.5mm); large RECTANGULAR parma; short ROUND spiracular plate with triangular perforated region; large broad adanal plates with concave anteromedian margin; obliquely oriented paramedian grooves",hosts:"Camelus dromedarius; Bos indicus; Capra hircus",vector:"Unknown",distribution:"Balochistan (Quetta, Chagi, Kalat, Nushki, Gulistan)",note:"Largest Hyalomma"},
+  {id:39,family:"Ixodidae",genus:"Hyalomma",species:"scupense",authority:"Schulze, 1919",size_m:"4.10mm long, 2.44mm wide",size_f:"5.05mm long, 3.44mm wide",color:"Red-brown to BLACKISH (♂); red-brown (♀)",scutum:"♂ Broadly oval, widest at midlength; outline NEARLY SQUARISH POSTERIORLY; lateral/cervical grooves shallow (to eye region); PARMA DOME-SHAPED, flanked by 4 well-defined festoons. Eyes large/bulging. ♀ Somewhat broader than long; slightly developed posterolateral angles",capitulum:"♂ Basis lacking lateral projections; dorsal margin concave; moderately developed cornua; hypostome SHORTER than palpi; dental 3/3. ♀ Lateral projections short dorsally, barely visible ventrally",dental:"3/3",coxal:"♂ Coxa I: external slightly > internal, closely appressed/pointed; coxae II–IV: triangular rounded apices; 3 pairs WELL-DEVELOPED ventral plates; adanal plates long and BROAD. ♀ Coxa I: long subequal; posterior lip WIDE DEEP V-SHAPED",key_features:"SQUARISH conscutum posteriorly; DOME-SHAPED parma; 4 flanking festoons; 3 pairs well-developed ventral plates; long broad adanal plates; V-shaped posterior genital lip (♀)",hosts:"Ovis aries; Camelus dromedarius; Bos indicus; Bubalus bubalis; Equus caballus; Capra hircus",vector:"Anaplasma marginale; CCHFV; SFG Rickettsia",distribution:"Balochistan, Punjab, KP, northern areas, Gilgit-Baltistan",note:""},
+  {id:40,family:"Ixodidae",genus:"Hyalomma",species:"turanicum",authority:"Pomerantzev, 1946",size_m:"4.47mm long, 2.34mm wide",size_f:"6.10mm long, 3.04mm wide",color:"Dark conscutum; numerous small punctations",scutum:"♂ Elongate-oval; dark; PARMA ABSENT; 5 clearly defined festoons; cervical grooves shallow (1/3 scutal); lateral grooves long (to eyes). Eyes large/bulging in sockets. ♀ DISTINCTLY SINUOUS posterior scutal margin; dark densely covered medium punctations",capitulum:"♂ Basis subrectangular; dorsal margin concave; posterolateral projections absent; cornua minute; palpi > hypostome; dental 3/3. ♀ Posterior dorsal margin straight or slightly concave",dental:"3/3",coxal:"♂ Coxa I: long subequal external/internal; adanal plates long truncated; subanal plates MINUTE; accessory plates long adjacent to subanal. ♀ Spiracular plates surrounded by DENSE SETAE; posterior lip broadly U-shaped",key_features:"Parma ABSENT with only 5 festoons; spiracular plates surrounded by numerous setae (♂); DISTINCTLY SINUOUS posterior scutal margin (♀); long accessory plates adjacent to subanal plates",hosts:"Capra hircus; Ovis aries; Camelus dromedarius; Bos indicus",vector:"Unknown",distribution:"Punjab, Balochistan, KP",note:""},
+  {id:41,family:"Ixodidae",genus:"Ixodes",species:"hyatti",authority:"Clifford, Hoogstraal & Kohls, 1971",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; NO EYES; NO FESTOONS (Ixodes hallmarks)",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; Ixodes = no eyes, no festoons; pika tick; high altitude",hosts:"Ochotona roylei (Royle's pika)",vector:"Unknown",distribution:"Pakistan — high altitude northern areas",note:""},
+  {id:42,family:"Ixodidae",genus:"Ixodes",species:"kashmiricus",authority:"Pomerantzev, 1948",size_m:"2.40mm long, 1.31mm wide",size_f:"4.08mm long, 2.49mm wide",color:"Reddish-black conscutum (♂)",scutum:"♂ REDDISH-BLACK, broadly oval; small punctations uniform over anterior/central; large punctations sparse; LONG SETAE (longest laterally); lateral grooves ABSENT; cervical grooves short/small. ♀ Broadly ovate; large deep irregular punctations in posteromedian area and laterally",capitulum:"♂ Short; basis with small INDISTINCT cornua; dorsal margin straight; palpi > hypostome; dental 3/3. ♀ Long; basis subrectangular; widely spaced LARGE porose areas; no lateral projections; dental 3/3",dental:"3/3",coxal:"♂ Coxa I: LONG POINTED INTERNAL spur + very short MINUTE external spur; coxae II–IV: broadly triangular rounded internal + distinct pointed arcuate external; genital aperture between COXAE III. ♀ Coxa I: long pointed internal + very short external; coxae II–IV similar; genital aperture between COXAE IV; spiracular plates oval WITHOUT dorsal prolongation",key_features:"NO FESTOONS; NO EYES (Ixodes); reddish-black conscutum; long lateral setae; coxa I long internal + minute external; genital aperture at coxae III (♂)/coxae IV (♀); spiracular plates without dorsal prolongation",hosts:"Capra hircus; Ovis aries (goats and sheep)",vector:"Undetermined Rickettsia sp.",distribution:"Shangla District (KP); Murree District (Punjab)",note:""},
+  {id:43,family:"Ixodidae",genus:"Ixodes",species:"redikorzevi",authority:"Olenev, 1927",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; no eyes; no festoons",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; Hazara virus vector; pika tick",hosts:"Ochotona roylei (Royle's pika)",vector:"Hazara virus",distribution:"Pakistan — high altitude",note:""},
+  {id:44,family:"Ixodidae",genus:"Ixodes",species:"stromi",authority:"Filippova, 1957",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; no eyes; no festoons",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; pika tick",hosts:"Ochotona roylei (Royle's pika)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:45,family:"Ixodidae",genus:"Nosomma",species:"monstrosum",authority:"(Nuttall & Warburton, 1908)",size_m:"4.38mm long, 3.08mm wide",size_f:"4.21mm long, 2.59mm wide",color:"Not specified (♂); dark brown to blackish (♀ with dense thick white setae)",scutum:"♂ Nearly CIRCULAR; PSEUDOSCUTAL GROOVE BEHIND EYES; wide depression between festoons 2–4; lateral grooves broad/shallow; eyes FLAT; punctations variable. ♀ Broader than long; DISTINCTLY SINUOUS posterolateral margins; cervical grooves deep; ♀ idiosoma densely covered by moderately long THICK WHITE SETAE",capitulum:"♂ Basis rectangular 2.2× wider than long; slightly concave; WELL-DEFINED cornua; palpi short/broad; segments DISTINCTLY ANGULAR in profile; hypostome < palpi; dental 3/3; SCALE-LIKE TEETH (♀). ♀ Basis 2× as wide; straight margin; broadly rounded cornua",dental:"3/3",coxal:"♂ Each coxa with PAIR OF SPURS; coxa I: broad internal + narrow longer external; coxa IV: largest internal spur; spiracular plates COMMA-SHAPED; dorsal prolongation short/broad. ♀ Posterior lip U-shaped between coxae II; spiracular plates SUBTRIANGULAR; dorsal prolongation very short",key_features:"UNIQUE GENUS. Pseudoscutal groove behind flat eyes; comma-shaped spiracular plates (♂); subtriangular spiracular plates (♀); ♀ densely covered thick white setae; scale-like teeth; wide depression between festoons 2–4; circular conscutum",hosts:"Bubalus bubalis (Asian water buffalo)",vector:"Unknown",distribution:"Haripur District (KP)",note:"Unique genus"},
+  {id:46,family:"Ixodidae",genus:"Rhipicephalus",species:"annulatus",authority:"(Say, 1821)",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick; HEXAGONAL basis capituli (Rhipicephalus hallmark)",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; Rhipicephalus = hexagonal basis capituli",hosts:"Bos indicus; Capra hircus; Ovis aries; Bubalus bubalis",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+  {id:47,family:"Ixodidae",genus:"Rhipicephalus",species:"haemaphysaloides",authority:"Supino, 1897",size_m:"3.23mm long, 1.68mm wide",size_f:"2.78mm long, 1.57mm wide",color:"Reddish brown or dark red",scutum:"♂ Narrow anteriorly, posteriorly broadly rounded; lateral grooves PUNCTATE, DEEP, almost to eyes, enclosing first 2 festoons; posteromedian groove broad long deep; conscutum smooth with scattered medium-sized punctations; eyes MARGINAL AND FLATTENED. ♀ Nearly as wide as long; sinuous posterior margin; few large irregular punctations laterally; central region IMPUNCTATE",capitulum:"♂ Basis HEXAGONAL; posterior margin DEEPLY CONCAVE AND ARCUATE; cornua pointed; LATERAL MARGINS HIGHLY PROJECTED; palpi stout ≈ hypostome; dental 3/3. ♀ Broader than long; lateral margins curved",dental:"3/3",coxal:"♂ Coxa I: 2 subequal spurs (internal subtriangular > external); coxae II–IV: external distinct slightly arcuate; ADANAL PLATES SICKLE-SHAPED, posteriorly pointed; accessory plates very weak; spiracular plates DISTINCTLY COMMA-SHAPED; dorsal prolongation BROAD. ♀ Posterior lip narrowly U-shaped",key_features:"HEXAGONAL basis capituli; HIGHLY PROJECTED lateral margins of basis; SICKLE-SHAPED adanal plates; comma-shaped spiracular plates with broad dorsal prolongation; eyes marginal/flat; central region impunctate (♀)",hosts:"Capra hircus; Ovis aries; Camelus dromedarius; Bos indicus; Equus caballus; Equus asinus; Sus scrofa; Canis lupus familiaris",vector:"SFG Rickettsia; Candidatus Rickettsia shennongii; Anaplasma spp.; Ehrlichia menasensis; Hepatozoon canis; Coxiella burnetii",distribution:"Sindh, Balochistan, Punjab, KP, Gilgit-Baltistan, AJK",note:""},
+  {id:48,family:"Ixodidae",genus:"Rhipicephalus",species:"microplus",authority:"(Canestrini, 1888)",size_m:"1.98mm long, 1.00mm wide",size_f:"2.43mm long, 1.26mm wide",color:"Yellowish to dark brown",scutum:"♂ Narrow, covered with LONG SETAE; scapulae ROBUST AND POINTED (subtriangular); FESTOONS ABSENT; short CAUDAL APPENDAGE present; eyes inconspicuous. ♀ Elongate oval narrowing posteriorly; densely covered by LONG SETAE; eyes FLAT and YELLOWISH",capitulum:"♂ Basis SUBHEXAGONAL; posterior margin straight; short blunt triangular cornua; palpi ≈ hypostome; dental 4/4. ♀ Slightly convex posterior margin; weakly developed cornua; porose areas oval separated < their width",dental:"4/4",coxal:"♂ Coxa I: 2 EQUAL spurs (internal blunt, external pointed cylindrical); coxae II–III: rounded internal/external; coxa IV: LACKING prominent spurs; adanal plates long (single SHARP POSTERIOR POINT); accessory plates long (single posterior point). ♀ Posterior lip broadly U-shaped",key_features:"FESTOONS ABSENT (unique diagnostic); CAUDAL APPENDAGE present; long setae on conscutum; 4/4 dental; flat yellowish eyes (♀); adanal/accessory plates each terminate in SINGLE SHARP POINT; subhexagonal basis; cordiform genital aperture",hosts:"Bubalus bubalis; Canis lupus familiaris; Capra hircus; Ovis aries; Bos indicus; Felis catus",vector:"CCHFV; Candidatus R. amblyommii; Ehrlichia menasensis; Rickettsia spp.; Anaplasma spp.; Hepatozoon canis; Coxiella burnetii; Francisella-like endosymbiont",distribution:"Sindh, KP, Balochistan, Punjab, AJK — MOST FREQUENTLY REPORTED at all localities",note:"Most common"},
+  {id:49,family:"Ixodidae",genus:"Rhipicephalus",species:"ramachandrai",authority:"Dhanda, 1966",size_m:"—",size_f:"—",color:"Not redescribed",scutum:"Hard tick with scutum",capitulum:"Not redescribed",dental:"—",coxal:"Not redescribed",key_features:"Literature record; shrew tick",hosts:"Suncus murinus (Asian house shrew)",vector:"Unknown",distribution:"Pakistan (literature)",note:""},
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let uploadedFile = null;
+let uploadedBase64 = null;
+let apiKey = localStorage.getItem('tick_api_key') || '';
+let openCard = null;
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (apiKey) {
+    document.getElementById('api-key-input').value = apiKey;
+    document.getElementById('api-status').textContent = '✓ API key loaded from storage';
+    document.getElementById('api-status').className = 'api-status ok';
+  }
+  renderBank(SPECIES_BANK);
+  setupUpload();
+});
+
+// ─── API KEY ─────────────────────────────────────────────────────────────────
+function saveKey() {
+  const v = document.getElementById('api-key-input').value.trim();
+  if (!v.startsWith('sk-ant')) {
+    document.getElementById('api-status').textContent = '✗ Invalid key format (should start with sk-ant)';
+    document.getElementById('api-status').className = 'api-status err';
+    return;
+  }
+  apiKey = v;
+  localStorage.setItem('tick_api_key', v);
+  document.getElementById('api-status').textContent = '✓ API key saved';
+  document.getElementById('api-status').className = 'api-status ok';
+}
+
+// ─── UPLOAD ──────────────────────────────────────────────────────────────────
+function setupUpload() {
+  const zone = document.getElementById('upload-zone');
+  const input = document.getElementById('file-input');
+
+  input.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+}
+
+function loadFile(file) {
+  uploadedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedBase64 = e.target.result.split(',')[1];
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('identify-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage() {
+  uploadedFile = null; uploadedBase64 = null;
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('identify-btn').disabled = true;
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('tab-results').style.display = tab === 'results' ? '' : 'none';
+  document.getElementById('tab-bank').style.display = tab === 'bank' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='results')||(i===1&&tab==='bank')));
+}
+
+// ─── SPECIES BANK TABLE ───────────────────────────────────────────────────────
+function renderBank(data) {
+  const tbody = document.getElementById('bank-body');
+  tbody.innerHTML = data.map(s => `
+    <tr>
+      <td>${s.id}</td>
+      <td style="color:var(--muted);font-size:.7rem">${s.family}</td>
+      <td class="italic" style="font-weight:600">${s.genus} ${s.species} <span style="font-style:normal;font-size:.68rem;color:var(--muted)">${s.authority}</span>
+        ${s.note ? `<br><span style="font-style:normal;font-size:.65rem;color:var(--gold)">${s.note}</span>` : ''}
+      </td>
+      <td style="font-size:.72rem;color:var(--muted)">${s.hosts}</td>
+      <td style="font-size:.72rem;color:var(--muted)">${s.distribution}</td>
+    </tr>`).join('');
+}
+
+function filterBank() {
+  const q = document.getElementById('bank-search').value.toLowerCase();
+  renderBank(q ? SPECIES_BANK.filter(s =>
+    (s.genus+' '+s.species+' '+s.family+' '+s.hosts+' '+s.distribution+' '+s.vector).toLowerCase().includes(q)
+  ) : SPECIES_BANK);
+}
+
+// ─── IDENTIFY ────────────────────────────────────────────────────────────────
+async function identify() {
+  if (!apiKey) { alert('Please enter your Anthropic API key first.'); return; }
+  if (!uploadedBase64) { alert('Please upload a tick photo first.'); return; }
+
+  const genusHint = document.getElementById('genus-hint').value;
+  showResults('loading');
+
+  // Build compact species bank for prompt
+  const bankText = SPECIES_BANK.map(s =>
+    `[${s.id}] ${s.genus} ${s.species} (${s.family})\nKEY: ${s.key_features}\nSIZE: ♂${s.size_m} ♀${s.size_f}\nCOLOR: ${s.color}\nDENTAL: ${s.dental}\nCOXAL: ${s.coxal}\nHOSTS: ${s.hosts}\nDISTR: ${s.distribution}`
+  ).join('\n---\n');
+
+  const systemPrompt = `You are an expert acarologist specializing in tick morphology. You will analyze a tick photograph and compare it against a database of 49 Pakistan tick species. 
+
+RESPOND ONLY WITH VALID JSON — no markdown, no preamble, no explanation outside JSON.
+
+Return this exact structure:
+{
+  "top_matches": [
+    {
+      "species_id": <number>,
+      "genus": "<string>",
+      "species": "<string>",
+      "family": "<string>",
+      "score": <integer 0-100>,
+      "matched_features": ["<feature1>", "<feature2>", ...],
+      "different_features": ["<diff1>", ...],
+      "confidence": "<High|Medium|Low>",
+      "reasoning": "<1-2 sentences>"
+    }
+  ],
+  "visible_characters": "<what morphological characters are visible in the image>",
+  "recommendation": "<practical recommendation for confirmation>",
+  "sex": "<Male|Female|Unknown>",
+  "stage": "<Adult|Nymph|Larva|Unknown>"
+}
+
+Return top 5 matches ranked by score. Be scientifically rigorous.`;
+
+  const userPrompt = `Analyze this tick photograph and match it against the Pakistan tick species bank below.
+${genusHint ? `GENUS HINT from user: ${genusHint} — weight species in this group more heavily if morphology matches.` : ''}
+
+PAKISTAN TICK SPECIES BANK (49 species):
+${bankText}
+
+Score each species 0-100 based on morphological similarity visible in the image. Return the top 5 matches.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: uploadedFile.type || 'image/jpeg', data: uploadedBase64 } },
+            { type: 'text', text: userPrompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.content[0].text;
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    showResults('results', result);
+  } catch (err) {
+    showResults('error', err.message);
+  }
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────────────────────────
+function showResults(state, data) {
+  const area = document.getElementById('results-area');
+
+  if (state === 'loading') {
+    area.innerHTML = `<div class="loading">
+      <div class="spinner"></div>
+      <p>Analyzing tick morphology...</p>
+      <div class="loading-steps">Comparing against 49 Pakistan tick species<br>Evaluating scutum · capitulum · coxa spurs · festoons<br>Calculating similarity scores</div>
+    </div>`;
+    return;
+  }
+
+  if (state === 'error') {
+    area.innerHTML = `<div class="placeholder"><div class="placeholder-icon">⚠️</div><p style="color:var(--danger)">${data}</p><p style="font-size:.78rem;margin-top:8px">Check your API key and try again.</p></div>`;
+    return;
+  }
+
+  // Render results
+  const { top_matches, visible_characters, recommendation, sex, stage } = data;
+
+  const metaHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    ${sex !== 'Unknown' ? `<span class="feature-tag match">Sex: ${sex}</span>` : ''}
+    ${stage !== 'Unknown' ? `<span class="feature-tag">Stage: ${stage}</span>` : ''}
+  </div>
+  <div style="background:var(--bg);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:.78rem;color:var(--muted);line-height:1.5">
+    <strong style="color:var(--text)">Visible characters:</strong> ${visible_characters}
+  </div>`;
+
+  const cardsHTML = top_matches.map((m, i) => {
+    const sp = SPECIES_BANK.find(s => s.id === m.species_id) || {};
+    const isTop = i === 0;
+    const matchedTags = (m.matched_features || []).map(f => `<span class="feature-tag match">${f}</span>`).join('');
+    const diffTags = (m.different_features || []).map(f => `<span class="feature-tag diff">${f}</span>`).join('');
+    const hasPathogen = sp.vector && sp.vector !== 'Unknown';
+
+    return `<div class="match-card${isTop ? ' top' : ''}" id="card-${i}">
+      <div class="match-top" onclick="toggleCard(${i})">
+        <div class="rank">${isTop ? '🏆' : '#'+(i+1)}</div>
+        <div class="match-info">
+          <div class="match-species">${m.genus} ${m.species}</div>
+          <div class="match-family">${m.family} · ${m.confidence} confidence · ${sp.distribution || ''}</div>
+        </div>
+        <div class="score-wrap">
+          <div class="score">${m.score}</div>
+          <div class="score-label">/ 100</div>
+        </div>
+      </div>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${m.score}%"></div></div>
+      <div class="match-detail" id="detail-${i}">
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;margin-top:4px">${m.reasoning}</div>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Body Size</div>
+            <div class="detail-value">♂ ${sp.size_m || '—'}<br>♀ ${sp.size_f || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Dental Formula</div>
+            <div class="detail-value">${sp.dental || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Color</div>
+            <div class="detail-value">${sp.color || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Hosts</div>
+            <div class="detail-value">${sp.hosts || '—'}</div>
+          </div>
+          <div class="detail-item detail-full">
+            <div class="detail-label">Key Morphological Features</div>
+            <div class="detail-value">${sp.key_features || '—'}</div>
+          </div>
+          ${matchedTags ? `<div class="detail-full"><div class="detail-label" style="margin-bottom:5px">Matched features</div><div class="features-list">${matchedTags}</div></div>` : ''}
+          ${diffTags ? `<div class="detail-full"><div class="detail-label" style="margin-bottom:5px">Differentiating features</div><div class="features-list">${diffTags}</div></div>` : ''}
+          ${hasPathogen ? `<div class="detail-full"><div class="detail-label" style="margin-bottom:5px">Known vector potential</div><div class="features-list">${sp.vector.split(';').map(p => `<span class="pathogen-badge">${p.trim()}</span>`).join('')}</div></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="match-header">
+      <h3>Top morphological matches</h3>
+      <span class="match-count">${top_matches.length} matches</span>
+    </div>
+    ${metaHTML}
+    ${cardsHTML}
+    <div style="background:var(--bg);border-radius:6px;padding:10px 12px;margin-top:10px;font-size:.78rem;color:var(--muted)">
+      <strong style="color:var(--text)">📋 Recommendation:</strong> ${recommendation}
+    </div>`;
+}
+
+function toggleCard(i) {
+  const d = document.getElementById(`detail-${i}`);
+  d.classList.toggle('open');
+}
+</script>
+</body>
+</html>
